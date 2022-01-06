@@ -1,4 +1,5 @@
 import abc
+import torch
 
 class AbstractModel(torch.nn.Module, metaclass=abc.ABCMeta):
     """Abstract class for RSG models."""
