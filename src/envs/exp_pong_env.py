@@ -5,7 +5,6 @@ import io
 import gym
 import numpy as np
 from gym import spaces
-import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
 
@@ -24,12 +23,12 @@ class ExpPongEnv(gym.Env):
         # are visible but empty, and ones with 1 contain a ball
         # self.observation_space = spaces.Box(low=-1, high=1, shape=(GRID_DIM, GRID_DIM), dtype=np.int)
         self.observation_space = spaces.Box(low=-1, high=1, shape=(1, GRID_DIM), dtype=np.int)
-        self.max_steps = 50
+        self.max_steps = 100
 
     def step(self, action):
         # Execute one time step within the environment
-        self._take_action(action)
         self.current_step += 1
+        self._take_action(action)
         obs = self._next_observation()
         reward = self._get_reward()
         done = False
@@ -39,16 +38,23 @@ class ExpPongEnv(gym.Env):
     
     def reset(self):
         # Reset the state of the environment to an initial state
-        self.agent_pos = np.int8(GRID_DIM/2)
         self.current_step = 0
+        self.agent_pos = np.int8(GRID_DIM/2)
+        self.last_visit = np.full(shape=(GRID_DIM), fill_value=-np.inf)
+        self.last_visit[self.agent_pos] = self.current_step
         return dict(obs=self._next_observation(), reward=0, done=False, info={}, image=self._get_image())
 
-    def _take_action(self, action):
-        self.agent_pos += action 
+    def _take_action(self, action):  
+        action = action + self.action_space.start
+        self.agent_pos += np.array(action).squeeze()
         self.agent_pos = np.clip(self.agent_pos, a_min=0, a_max=GRID_DIM-1)
+        self.last_visit[self.agent_pos] = self.current_step
 
     def _get_reward(self):
-        return self.agent_pos / GRID_DIM
+        height = GRID_DIM
+        time_since_last_visit = self.last_visit - self.current_step
+        known = np.sum(np.clip(height + time_since_last_visit, a_min=0, a_max=height))/(GRID_DIM * GRID_DIM)
+        return known
 
     def _next_observation(self):
         obs = np.full(shape=(1, GRID_DIM), fill_value=-1)
@@ -59,15 +65,6 @@ class ExpPongEnv(gym.Env):
         print(f'Agent position: {self.agent_pos}')
 
     def _get_image(self):
-
-        # return grid
-        # plt.close('all')
-        # fig = plt.figure()
-        # plt.plot([1, 2])
-        # plt.title("test")
-        # buf = io.BytesIO()
-        # plt.savefig(buf, format='jpeg')
-        # buf.seek(0)
         fig = Figure()
         canvas = FigureCanvas(fig)
         ax = fig.gca()        

@@ -1,25 +1,11 @@
 import numpy as np
-def _render_action(image, action, action_space):
-    """Render a grid action onto an image.
-    
-    This function creates a red border on the image in the direction of the
-    action, if the action space is oog.action_spaces.Grid.
-    Args:
-        image: Uint8 Numpy array of shape [height, width, channels]. Image
-            observation from environment timestep.
-        action: Action produced by the agent.
-        action_space: Action spaces. Should be env.action_space.
-    """
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib.figure import Figure
+from envs.exp_pong_env import GRID_DIM
 
-    if action == 0:
-        image[:, :1] = np.array([[255, 0, 0]], dtype=np.uint8)
-    elif action == -1:
-        image[:, -1:] = np.array([[255, 0, 0]], dtype=np.uint8)
-    elif action == 1:
-        image[-1:] = np.array([[255, 0, 0]], dtype=np.uint8)
+
 
 def _image_reshaping(images, buffer_height):
-    # import pdb; pdb.set_trace()
     height, width, channels = images[0].shape
     num_steps = len(images)
     images = np.array(images)
@@ -33,6 +19,38 @@ def _image_reshaping(images, buffer_height):
 
     return images
 
+def _generate_episode_figure(agent_pos):
+        fig = Figure()
+        canvas = FigureCanvas(fig)
+        ax = fig.gca()        
+        ax.plot(agent_pos)
+        ax.set_ylim(-1, GRID_DIM)
+        ax.set_ylabel('agent position')
+        ax.set_xlabel('timestep')
+        width, height = fig.get_size_inches() * fig.get_dpi()
+        canvas.draw()
+        image = np.fromstring(canvas.tostring_rgb(), dtype='uint8').reshape(int(height), int(width), 3)
+        return [image]
+
+def generate_episode_figure(env, agent, buffer_height=3, max_steps=10):
+    num_steps = 0
+    agent_pos = []
+    actions = []
+    while num_steps == 0:
+        timestep = env.reset()
+        agent_pos = []
+        actions = []
+        while not timestep['done'] and num_steps < max_steps:
+            num_steps += 1
+            action = agent.step(timestep, env, test=True)            
+            actions.append(action)
+            timestep = env.step(action)
+            agent_pos.append(env.agent_pos)
+        agent_pos = np.array(agent_pos).squeeze()
+        image = _generate_episode_figure(agent_pos)
+    images_dict = {'validation': _image_reshaping(image, buffer_height)}    
+    return images_dict
+
 def generate_episode_video(env, agent, buffer_height=3, max_steps=10):
     """Generate a video of an episode."""
 
@@ -41,6 +59,7 @@ def generate_episode_video(env, agent, buffer_height=3, max_steps=10):
     while num_steps == 0:
         timestep = env.reset()
         images = []
+
         while not timestep['done'] and num_steps < max_steps:
             num_steps += 1
             image = timestep['image']

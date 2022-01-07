@@ -85,17 +85,26 @@ class Trainer():
 
             # Log images if necessary
             if step % self._image_eval_every == 0:
+
+            # Train figure
+                episode_image_train = visualization.generate_episode_figure(self._env, self._agent, max_steps=100)
+                for k, v in episode_image_train.items():
+                    if 'z' in k:
+                        summary_writer.add_image(k + ' train_figure', v, global_step=step)
+                    else:
+                        summary_writer.add_image(
+                            k + ' train_figure', v, global_step=step, dataformats='HWC')
+
                 # Train video
                 episode_images_train = visualization.generate_episode_video(
                     self._env, self._agent, max_steps=100)
-                # episode_images_train = list(episode_images_train.values())
-                # import pdb; pdb.set_trace()
                 for k, v in episode_images_train.items():
                     if 'z' in k:
-                        summary_writer.add_image(k + ' train', v, global_step=step)
+                        summary_writer.add_image(k + ' train_video', v, global_step=step)
                     else:
                         summary_writer.add_image(
-                            k + ' train', v, global_step=step, dataformats='HWC')
+                            k + ' train_video', v, global_step=step, dataformats='HWC')
+
             # Reset environment if end of episode is reached
             if timestep['done']:
                 timestep = self._env.reset()
