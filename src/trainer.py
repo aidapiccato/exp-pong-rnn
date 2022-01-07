@@ -4,6 +4,7 @@ import os
 from torch.utils import tensorboard
 import torch
 import logging
+from utils import visualization
 
 class Trainer():
     """Trainer class."""
@@ -13,7 +14,9 @@ class Trainer():
                  env,
                  iterations,
                  scalar_eval_every,
-                 snapshot_every):
+                 train_every,
+                 snapshot_every,
+                 image_eval_every):
         """Constructor.
         Args:
             agent: Instance of agent. Must have methods:
@@ -28,8 +31,10 @@ class Trainer():
         self._agent = agent
         self._env = env
         self._iterations = iterations
+        self._train_every = train_every
         self._scalar_eval_every = scalar_eval_every
         self._snapshot_every = snapshot_every
+        self._image_eval_every = image_eval_every
 
     def __call__(self, log_dir):
         """Run a training loop.
@@ -53,7 +58,7 @@ class Trainer():
             # Take a step
             action = self._agent.step(timestep, self._env)
             new_timestep = self._env.step(action)
-            if step != 0:
+            if step != 0 and step % self._train_every == 0:
                 loss = self._agent.train_step(timestep, action, new_timestep)
                 agg_loss += loss
             timestep = new_timestep
@@ -77,4 +82,21 @@ class Trainer():
                     summary_writer.add_scalar(k, v, global_step=step)
                 agg_reward = 0.
                 agg_loss = 0.
+
+            # Log images if necessary
+            if step % self._image_eval_every == 0:
+                # Train video
+                episode_images_train = visualization.generate_episode_video(
+                    self._env, self._agent, max_steps=100)
+                # episode_images_train = list(episode_images_train.values())
+                # import pdb; pdb.set_trace()
+                for k, v in episode_images_train.items():
+                    if 'z' in k:
+                        summary_writer.add_image(k + ' train', v, global_step=step)
+                    else:
+                        summary_writer.add_image(
+                            k + ' train', v, global_step=step, dataformats='HWC')
+            # Reset environment if end of episode is reached
+            if timestep['done']:
+                timestep = self._env.reset()
 
