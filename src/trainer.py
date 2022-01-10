@@ -100,3 +100,9 @@ class Trainer():
             if timestep['done']:
                 timestep = self._env.reset()
 
+
+            # Save snapshot
+            if step % self._snapshot_every == 0:
+                logging.info('Saving snapshot.')
+                snapshot_filename = os.path.join(snapshot_dir, str(step))
+                torch.save(self._agent.state_dict(), snapshot_filename)
