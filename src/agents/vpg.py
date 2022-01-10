@@ -23,8 +23,7 @@ class VPG():
 
 
     def step(self, timestep, env, **kwargs):
-        del env 
-
+        # del env 
         if (np.random.rand() < self._epsilon):
             # Random action
             action = np.random.randint(0, self._num_actions)
@@ -54,9 +53,6 @@ class VPG():
             action ([type]): [description]
             timestep ([type]): [description]
         """
-
-
-
         # Zero gradients
         self._optimizer.zero_grad()
 
@@ -71,14 +67,17 @@ class VPG():
                 running_sum = running_sum * self._discount + reward
                 discounted_reward_batch.append(running_sum)
         discounted_reward_batch = np.asarray(list(reversed(discounted_reward_batch)))
+        
         # Normalize reward
         reward_mean = np.mean(discounted_reward_batch)
         reward_std = np.std(discounted_reward_batch)       
         if reward_std < 1e-5:
             reward_std = 1.0
         discounted_reward_batch = (discounted_reward_batch - reward_mean) / reward_std
-        agg_loss = 0.
+      
+        
         # Gradient descent
+        agg_loss = 0.
         for obs, action, reward in zip(self._state_batch, self._action_batch, discounted_reward_batch):
             probs = self._policy_net(torch.Tensor(obs))
             reward = torch.tensor(reward, requires_grad=False)
