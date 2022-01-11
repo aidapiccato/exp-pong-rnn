@@ -98,4 +98,4 @@ class VPG():
         return agg_loss
 
     def state_dict(self):
-        pass
+        return self._policy_net.state_dict()

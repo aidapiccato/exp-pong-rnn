@@ -1,7 +1,6 @@
 """Environment class.
 """
 
-import io
 import gym
 import numpy as np
 from gym import spaces
@@ -27,8 +26,8 @@ class PongEnv(gym.Env):
         self.max_target_t = 20
         self.target_t_distrib = spaces.Discrete(n=self.max_target_t - self.min_target_t, start=self.min_target_t)
         self.agent_gain = 0.5
-        self.x_width = 2
-        self.t_width = 3
+        self.x_width = 1
+        self.t_width = 2
 
     def reset(self):
         # Reset the state of the environment to an initial state
