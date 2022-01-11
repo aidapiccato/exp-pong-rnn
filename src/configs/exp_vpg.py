@@ -3,12 +3,12 @@
 import trainer
 import torch
 from agents import vpg
-from envs import exp_pong_env
+from envs import exp_env
 from utils import mlp
 
 def get_policy_net_config():
     config = {
-        'constructor': mlp.MLP,
+        'constructor': mlp.MLP, # TODO: Change this to use new MLP module
     }
     return config
 
@@ -40,7 +40,7 @@ def get_config():
         'constructor': trainer.Trainer,
         'kwargs': {
             'agent': get_agent_config(),
-            'env': exp_pong_env.ExpPongEnv(),    
+            'env': exp_env.ExpEnv(),    
             'iterations': int(1e6),
             'train_every': 10,
             'image_eval_every': 1000,

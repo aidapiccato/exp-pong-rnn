@@ -27,7 +27,6 @@ class PongEnv(gym.Env):
         self.target_t_distrib = spaces.Discrete(n=self.max_target_t - self.min_target_t, start=self.min_target_t)
         self.agent_gain = 0.5
         self.x_width = 1
-        self.t_width = 2
 
     def reset(self):
         # Reset the state of the environment to an initial state
@@ -50,7 +49,6 @@ class PongEnv(gym.Env):
         one_hot = np.zeros((1, GRID_DIM))
         one_hot[:, int(self.agent_pos)] = 1
         return np.concatenate((self.input[self.current_step, :].reshape(1, -1), one_hot), axis=1).squeeze()
-        # return np.concatenate([self.input[self.current_step, :], (self.agent_pos, )], axis=0)
 
     def step(self, action):
         # Execute one time step within the environment
@@ -60,7 +58,7 @@ class PongEnv(gym.Env):
         obs = self._next_observation()
         reward = self._get_reward()
         done = False
-        if self.current_step > (self.target_t + self.t_width):
+        if self.current_step > (self.target_t + 2):
             done = True
         return dict(obs=obs, reward=reward, done=done, info={}, image=self._get_image())    
 
@@ -70,12 +68,9 @@ class PongEnv(gym.Env):
         self.agent_pos = np.clip(self.agent_pos, a_min=0, a_max=GRID_DIM-1)
 
     def _get_reward(self):
-        if self.target_t - self.t_width <= self.current_step <= self.target_t + self.t_width:
-            # if self.target_x - self.x_width <= self.agent_pos <= self.target_x + self.x_width:
-            distance = np.abs(self.target_x - self.agent_pos)
-            if distance > self.x_width:
-                return -1 * (distance - self.x_width)/(GRID_DIM - self.x_width)
-            return 1 - distance/self.x_width
+        if self.current_step == self.target_t:
+            if self.target_x - self.x_width <= self.agent_pos <= self.target_x + self.x_width:
+                return 1
         return 0
 
     def generate_episode_figure(self, agent, max_steps, buffer_height=3):
