@@ -54,14 +54,13 @@ class Trainer():
         summary_writer = tensorboard.SummaryWriter(log_dir=summary_dir)
 
         for step in range(self._iterations):
-
             # Take a step
             action = self._agent.step(timestep, self._env)
             new_timestep = self._env.step(action)
             if step != 0 and step % self._train_every == 0:
-                loss = self._agent.train_step(timestep, action, new_timestep)
+                loss = self._agent.train_step(prev_timestep=timestep, action=action, timestep=new_timestep)
                 agg_loss += loss
-            timestep = new_timestep
+            timestep = new_timestep.copy()
 
             # Update agg_reward
             if timestep['reward'] is not None:
@@ -83,9 +82,9 @@ class Trainer():
                 agg_reward = 0.
                 agg_loss = 0.
 
-            # Log images if necessary
-            if step % self._image_eval_every == 0:
-
+            # Log images if necessary (and only if an episode has been completed)
+            if step % self._image_eval_every == 0 and timestep['done']:
+                logging.info('Generating figure')
                 # Train figure 
                 episode_image_figure = self._env.generate_episode_figure(self._agent, max_steps=100)
                 for k, v in episode_image_figure.items():
@@ -109,6 +108,7 @@ class Trainer():
 
             # Reset environment if end of episode is reached
             if timestep['done']: 
+                logging.info('Episode done')
                 timestep = self._env.reset()
 
             # Save snapshot

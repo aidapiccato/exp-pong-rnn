@@ -7,6 +7,7 @@ import numpy as np
 from gym import spaces
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
+from utils.visualization import image_reshaping
 
 
 GRID_DIM = 10
@@ -23,7 +24,7 @@ class ExpEnv(gym.Env):
         # are visible but empty, and ones with 1 contain a ball
         # self.observation_space = spaces.Box(low=-1, high=1, shape=(GRID_DIM, GRID_DIM), dtype=np.int)
         self.observation_space = spaces.Box(low=-1, high=1, shape=(1, GRID_DIM), dtype=np.int)
-        self.max_steps = 100
+        self.max_steps = 20
 
     def step(self, action):
         # Execute one time step within the environment
@@ -34,32 +35,36 @@ class ExpEnv(gym.Env):
         done = False
         if self.current_step > self.max_steps:
             done = True
-        return dict(obs=obs, reward=reward, done=done, info={}, image=self._get_image())
+        return dict(obs=obs, reward=reward, done=done, info={}, image=None)
     
     def reset(self):
         # Reset the state of the environment to an initial state
         self.current_step = 0
         self.agent_pos = np.int8(GRID_DIM/2)
         self.last_visit = np.full(shape=(GRID_DIM), fill_value=-np.inf)
+        self.prev_last_visit = np.copy(self.last_visit)
         self.last_visit[self.agent_pos] = self.current_step
-        return dict(obs=self._next_observation(), reward=0, done=False, info={}, image=self._get_image())
+        return dict(obs=self._next_observation(), reward=0, done=False, info={}, image=None)
 
     def _take_action(self, action):  
         action = action + self.action_space.start
         self.agent_pos += np.array(action).squeeze()
         self.agent_pos = np.clip(self.agent_pos, a_min=0, a_max=GRID_DIM-1)
+        self.prev_last_visit = np.copy(self.last_visit)
         self.last_visit[self.agent_pos] = self.current_step
 
     def _get_reward(self):
         height = GRID_DIM
         time_since_last_visit = self.last_visit - self.current_step
-        known = np.sum(np.clip(height + time_since_last_visit, a_min=0, a_max=height))/(GRID_DIM * GRID_DIM)
-        return known
+        prev_time_since_last_visit = self.prev_last_visit - (self.current_step - 1)
+        known = np.sum(np.clip(height + time_since_last_visit, a_min=0, a_max=height)) 
+        prev_known = np.sum(np.clip(height + prev_time_since_last_visit, a_min=0, a_max=height)) 
+        return np.clip(known - prev_known, a_min=0, a_max=np.inf)
 
     def _next_observation(self):
-        obs = np.full(shape=(1, GRID_DIM), fill_value=-1)
-        obs[:, self.agent_pos] = 0
-        return obs
+        one_hot = np.zeros((1, GRID_DIM))
+        one_hot[:, int(self.agent_pos)] = 1
+        return one_hot.squeeze()
 
     def render(self, mode='human', close=False):
         print(f'Agent position: {self.agent_pos}')
@@ -76,3 +81,48 @@ class ExpEnv(gym.Env):
         canvas.draw()       
         image = np.fromstring(canvas.tostring_rgb(), dtype='uint8').reshape(int(height), int(width), 3)
         return image
+
+    def generate_episode_figure(self, agent, max_steps, buffer_height=3):
+        num_steps = 0
+        agent_pos = []
+        reward = []
+        input = []
+        while num_steps == 0:
+            timestep = self.reset()
+            agent_pos = []
+            reward = []
+            input = []
+            while not timestep['done'] and num_steps < max_steps:
+                num_steps += 1
+                action = agent.step(timestep, self, test=True)            
+                timestep = self.step(action)
+                agent_pos.append(self.agent_pos)
+                reward.append(timestep['reward'])
+                input.append(timestep['obs'])
+            agent_pos = np.array(agent_pos).squeeze()
+            reward = np.array(reward).squeeze()
+            image = self._generate_episode_figure(agent_pos, reward, input)
+        self.reset()
+        images_dict = {'validation': image_reshaping(image, buffer_height)}    
+        return images_dict
+
+    def _generate_episode_figure(self, agent_pos, reward, input):
+        fig = Figure()
+        canvas = FigureCanvas(fig)
+
+        ax = fig.add_subplot(121)
+        ax_right = ax.twinx()
+        ax.plot(agent_pos)
+        ax.set_ylim(-1, GRID_DIM)
+        ax.set_ylabel('x')
+        ax.set_xlabel('timestep')
+        ax_right.plot(reward, 'r')
+        ax_right.set_ylabel('reward')   
+
+        ax = fig.add_subplot(122)
+        ax.imshow(input)
+
+        width, height = fig.get_size_inches() * fig.get_dpi()
+        canvas.draw()
+        image = np.fromstring(canvas.tostring_rgb(), dtype='uint8').reshape(int(height), int(width), 3)
+        return [image]

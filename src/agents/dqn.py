@@ -67,7 +67,6 @@ class DQN():
 
     def step(self, timestep, env, test=False):
         del env
-
         if (np.random.rand() < self._epsilon) and not test:
             # Random action
             return np.random.randint(0, self._num_actions)

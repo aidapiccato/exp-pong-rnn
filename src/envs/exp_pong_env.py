@@ -27,7 +27,6 @@ class ExpPongEnv(gym.Env):
         self.target_t_distrib = spaces.Discrete(n=self.max_target_t - self.min_target_t, start=self.min_target_t)
         self.agent_gain = 0.5
         self.x_width = 1
-        self.t_width = 2
 
     def reset(self):
         # Reset the state of the environment to an initial state
@@ -36,6 +35,9 @@ class ExpPongEnv(gym.Env):
         self.target_x = self.target_x_distrib.sample()
         self.target_t = self.target_t_distrib.sample()
         self.input = self._generate_input()
+        self.last_visit = np.full(shape=(GRID_DIM), fill_value=-np.inf)
+        self.prev_last_visit = np.copy(self.last_visit)
+        self.last_visit[self.agent_pos] = self.current_step
         return dict(obs=self._next_observation(), reward=0, done=False, info={}, image=self._get_image())
 
     def _generate_input(self):
@@ -50,17 +52,15 @@ class ExpPongEnv(gym.Env):
         one_hot = np.zeros((1, GRID_DIM))
         one_hot[:, int(self.agent_pos)] = 1
         return np.concatenate((self.input[self.current_step, :].reshape(1, -1), one_hot), axis=1).squeeze()
-        # return np.concatenate([self.input[self.current_step, :], (self.agent_pos, )], axis=0)
 
     def step(self, action):
         # Execute one time step within the environment
-
         self.current_step += 1
         self._take_action(action)
         obs = self._next_observation()
         reward = self._get_reward()
         done = False
-        if self.current_step > (self.target_t + self.t_width):
+        if self.current_step > (self.target_t + 2):
             done = True
         return dict(obs=obs, reward=reward, done=done, info={}, image=self._get_image())    
 
@@ -68,23 +68,23 @@ class ExpPongEnv(gym.Env):
         action = action + self.action_space.start
         self.agent_pos += np.array(action).squeeze() * self.agent_gain
         self.agent_pos = np.clip(self.agent_pos, a_min=0, a_max=GRID_DIM-1)
+        self.prev_last_visit = np.copy(self.last_visit)
+        self.last_visit[self.agent_pos] = self.current_step
+
+    def _get_intrinsic_reward(self):
+        height = GRID_DIM
+        time_since_last_visit = self.last_visit - self.current_step
+        prev_time_since_last_visit = self.prev_last_visit - (self.current_step - 1)
+        known = np.sum(np.clip(height + time_since_last_visit, a_min=0, a_max=height)) 
+        prev_known = np.sum(np.clip(height + prev_time_since_last_visit, a_min=0, a_max=height)) 
+        return np.clip(known - prev_known, a_min=0, a_max=np.inf)
 
     def _get_reward(self):
-        if self.target_t - self.t_width <= self.current_step <= self.target_t + self.t_width:
-            # if self.target_x - self.x_width <= self.agent_pos <= self.target_x + self.x_width:
-            # norm_distance = np.abs(self.target_x - self.agent_pos)/(GRID_DIM - 1)
-            # return 1 - norm_distance
-            distance = np.abs(self.target_x - self.agent_pos)
-            if distance <= self.x_width:
-                # return ((GRID_DIM - distance) - (GRID_DIM - self.x_width))/self.x_width # falls in range [0, x]
-                return (self.x_width - distance)/self.x_width
-            return (-1 * distance + self.x_width)/(GRID_DIM - self.x_width) # falls in range [-1, 0]
-            # distance = self.x_width - distance
-            # return distance
-            # if distance > self.x_width:
-            #     return -1 * (distance - self.x_width)/(GRID_DIM - self.x_width)
-            # return 1 - distance/self.x_width
-        return 0
+        reward = self._get_intrinsic_reward()
+        if self.current_step == self.target_t:
+            if self.target_x - self.x_width <= self.agent_pos <= self.target_x + self.x_width:
+                reward += 1
+        return reward
 
     def generate_episode_figure(self, agent, max_steps, buffer_height=3):
         num_steps = 0
@@ -96,6 +96,9 @@ class ExpPongEnv(gym.Env):
             agent_pos = []
             reward = []
             input = []
+            agent_pos.append(self.agent_pos)
+            reward.append(timestep['reward'])
+            input.append(timestep['obs'])
             while not timestep['done'] and num_steps < max_steps:
                 num_steps += 1
                 action = agent.step(timestep, self, test=True)            
