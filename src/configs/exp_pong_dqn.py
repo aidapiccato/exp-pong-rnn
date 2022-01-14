@@ -3,7 +3,7 @@
 import trainer
 import torch
 from agents import dqn
-from envs import exp_env
+from envs import exp_pong_env
 from utils import replay 
 from utils import mlp
 
@@ -11,7 +11,7 @@ def get_q_net_config():
     config = {
         'constructor': mlp.MLP,
         'kwargs': {
-            'in_features': 5 + 3, # AIDA: Length of observation (20), plus action vector
+            'in_features': 5 + 5 + 3, # AIDA: Length of observation (20), plus action vector
             'layer_features': [24, 1],
             'activation': [torch.nn.ReLU(), torch.nn.ReLU(),  torch.nn.ReLU()]
         },
@@ -55,7 +55,7 @@ def get_config():
         'constructor': trainer.Trainer,
         'kwargs': {
             'agent': get_agent_config(),
-            'env': exp_env.ExpEnv(),    
+            'env': exp_pong_env.ExpPongEnv(),    
             'iterations': int(1e6),
             'train_every': 1,
             'image_eval_every': 20*2,

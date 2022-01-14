@@ -26,12 +26,12 @@ class ExpPongEnv(gym.Env):
         self.max_target_t = 20
         self.target_t_distrib = spaces.Discrete(n=self.max_target_t - self.min_target_t, start=self.min_target_t)
         self.agent_gain = 0.5
-        self.x_width = 1
+        self.x_width = 0
 
     def reset(self):
         # Reset the state of the environment to an initial state
         self.current_step = 0
-        self.agent_pos = np.float32(GRID_DIM/2)
+        self.agent_pos = np.int8(GRID_DIM/2)
         self.target_x = self.target_x_distrib.sample()
         self.target_t = self.target_t_distrib.sample()
         self.input = self._generate_input()
@@ -49,10 +49,11 @@ class ExpPongEnv(gym.Env):
         return input
 
     def _next_observation(self):
-        one_hot = np.zeros((1, GRID_DIM))
-        one_hot[:, int(self.agent_pos)] = 1
-        return np.concatenate((self.input[self.current_step, :].reshape(1, -1), one_hot), axis=1).squeeze()
-
+        time_since_last_visit = self.last_visit - self.current_step
+        known = np.clip(GRID_DIM + time_since_last_visit, a_min=0, a_max=GRID_DIM)
+        return np.concatenate((self.input[self.current_step, :].reshape(-1), known)).squeeze()
+        # return known.squeeze()
+        
     def step(self, action):
         # Execute one time step within the environment
         self.current_step += 1
@@ -66,7 +67,7 @@ class ExpPongEnv(gym.Env):
 
     def _take_action(self, action):  
         action = action + self.action_space.start
-        self.agent_pos += np.array(action).squeeze() * self.agent_gain
+        self.agent_pos += np.array(action).squeeze()
         self.agent_pos = np.clip(self.agent_pos, a_min=0, a_max=GRID_DIM-1)
         self.prev_last_visit = np.copy(self.last_visit)
         self.last_visit[self.agent_pos] = self.current_step
@@ -77,7 +78,7 @@ class ExpPongEnv(gym.Env):
         prev_time_since_last_visit = self.prev_last_visit - (self.current_step - 1)
         known = np.sum(np.clip(height + time_since_last_visit, a_min=0, a_max=height)) 
         prev_known = np.sum(np.clip(height + prev_time_since_last_visit, a_min=0, a_max=height)) 
-        return np.clip(known - prev_known, a_min=0, a_max=np.inf)
+        return np.clip(known - prev_known, a_min=0, a_max=np.inf)/GRID_DIM
 
     def _get_reward(self):
         reward = self._get_intrinsic_reward()
