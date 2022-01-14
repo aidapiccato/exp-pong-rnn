@@ -84,7 +84,7 @@ class Trainer():
 
             # Log images if necessary (and only if an episode has been completed)
             if step % self._image_eval_every == 0 and timestep['done']:
-                logging.info('Generating figure')
+                logging.debug('Generating figure')
                 # Train figure 
                 episode_image_figure = self._env.generate_episode_figure(self._agent, max_steps=100)
                 for k, v in episode_image_figure.items():
@@ -108,7 +108,7 @@ class Trainer():
 
             # Reset environment if end of episode is reached
             if timestep['done']: 
-                logging.info('Episode done')
+                logging.debug('Episode done')
                 timestep = self._env.reset()
 
             # Save snapshot

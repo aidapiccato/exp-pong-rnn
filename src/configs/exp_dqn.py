@@ -11,7 +11,7 @@ def get_q_net_config():
     config = {
         'constructor': mlp.MLP,
         'kwargs': {
-            'in_features': 10 + 3, # AIDA: Length of observation, plus action vector
+            'in_features': 10 + 10 + 3, # AIDA: Length of observation (20), plus action vector
             'layer_features': [24, 1],
             'activation': [torch.nn.ReLU(), torch.nn.ReLU(),  torch.nn.ReLU()]
         },

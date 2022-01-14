@@ -64,7 +64,12 @@ class ExpEnv(gym.Env):
     def _next_observation(self):
         one_hot = np.zeros((1, GRID_DIM))
         one_hot[:, int(self.agent_pos)] = 1
-        return one_hot.squeeze()
+        one_hot = one_hot.squeeze()
+        time_since_last_visit = self.last_visit - self.current_step
+        known = np.clip(GRID_DIM + time_since_last_visit, a_min=0, a_max=GRID_DIM)
+        return np.concatenate((known, one_hot), axis=0).squeeze()
+        # return np.concatenate((self.input[self.current_step, :].reshape(1, -1), one_hot), axis=1).squeeze()
+        # return one_hot.squeeze()
 
     def render(self, mode='human', close=False):
         print(f'Agent position: {self.agent_pos}')
