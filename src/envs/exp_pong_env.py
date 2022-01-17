@@ -1,6 +1,8 @@
 """Environment class.
 """
-
+import matplotlib.pyplot as plt
+from matplotlib.pyplot import cm
+import seaborn as sns
 import gym
 import numpy as np
 from gym import spaces
@@ -59,7 +61,7 @@ class ExpPongEnv(gym.Env):
         self.current_step += 1
         self._take_action(action)
         obs = self._next_observation()
-        reward = self._get_reward()
+        reward = self._get_reward()        
         done = False
         if self.current_step > (self.target_t + 2):
             done = True
@@ -78,7 +80,7 @@ class ExpPongEnv(gym.Env):
         prev_time_since_last_visit = self.prev_last_visit - (self.current_step - 1)
         known = np.sum(np.clip(height + time_since_last_visit, a_min=0, a_max=height)) 
         prev_known = np.sum(np.clip(height + prev_time_since_last_visit, a_min=0, a_max=height)) 
-        return np.clip(known - prev_known, a_min=0, a_max=np.inf)/GRID_DIM
+        return 0.5 * np.clip(known - prev_known, a_min=0, a_max=np.inf)/GRID_DIM
 
     def _get_reward(self):
         reward = self._get_intrinsic_reward()
@@ -137,6 +139,81 @@ class ExpPongEnv(gym.Env):
         canvas.draw()
         image = np.fromstring(canvas.tostring_rgb(), dtype='uint8').reshape(int(height), int(width), 3)
         return [image]
+
+    def generate_test_figure(self, agent, max_steps, buffer_height=3):
+        timestep = self.reset()
+        num_steps = -1
+        agent_pos = []
+        reward = []
+        input = []
+        intercepted = []
+        done = []
+        episode_steps = []
+        target_x = []
+        target_t = []
+        while num_steps < max_steps:
+            num_steps += 1
+            episode_steps.append(num_steps)
+            target_x.append(self.target_x)
+            target_t.append(self.target_t)
+            timestep = self.reset()
+            agent_pos.append(self.agent_pos)
+            reward.append(timestep['reward'])
+            input.append(timestep['obs'])   
+            intercepted.append(False)
+            done.append(timestep['done'])
+            while not timestep['done']:
+                num_steps += 1
+                action = agent.step(timestep, self, test=True)            
+                timestep = self.step(action)
+                agent_pos.append(self.agent_pos)
+                reward.append(timestep['reward'])
+                input.append(timestep['obs'])
+                intercepted.append(self.target_t == self.current_step and self.target_x == self.agent_pos)
+                done.append(timestep['done'])
+        episode_steps.append(-1)
+
+        agent_pos = [agent_pos[episode_steps[i]:episode_steps[i+1]] for i in range(len(episode_steps) - 1)]
+        intercepted = [intercepted[episode_steps[i]:episode_steps[i+1]] for i in range(len(episode_steps) - 1)]
+        reward = [reward[episode_steps[i]:episode_steps[i+1]] for i in range(len(episode_steps) - 1)]
+        agent_pos_x = [np.arange(len(episode)) for episode in agent_pos]
+
+        intercepted = [np.sum(episode) for episode in intercepted]
+        agent_pos_std = [np.std(episode) for episode in agent_pos]
+        reward = [np.mean(episode) for episode in reward]
+ 
+        fig = Figure(figsize=(20, 6))
+        canvas = FigureCanvas(fig)
+
+        ax = fig.add_subplot(141) 
+        sns.regplot(x=target_x, y=intercepted, ax=ax, scatter=False)
+        ax.set_xlabel('target_x')
+        ax.set_ylabel('pr. intercepted')
+
+        ax = fig.add_subplot(142)
+        sns.regplot(x=target_x, y=agent_pos_std, ax=ax, scatter=False)
+        ax.set_xlabel('target_x')
+        ax.set_ylabel('agent pos. s.d.')
+
+        ax = fig.add_subplot(143)
+        sns.regplot(x=target_x, y=reward, ax=ax, scatter=False)
+        ax.set_xlabel('target_x')
+        ax.set_ylabel('avg. reward')
+
+
+        ax = fig.add_subplot(144)
+        color = cm.coolwarm(np.linspace(0, 1, len(np.unique(target_x))))
+        for c, trajectory in zip(target_x, agent_pos):
+            ax.plot(np.arange(len(trajectory)), trajectory, c=color[c])
+        ax.set_xlabel('time')
+        ax.set_ylabel('agent pos.')
+
+
+        width, height = fig.get_size_inches() * fig.get_dpi()
+        canvas.draw()
+        image = [np.fromstring(canvas.tostring_rgb(), dtype='uint8').reshape(int(height), int(width), 3)]
+        images_dict = {'validation': image_reshaping(image, buffer_height)}    
+        return images_dict
 
     def render(self, mode='human', close=False):
         print(f'Agent position: {self.agent_pos}')

@@ -4,7 +4,6 @@ import os
 from torch.utils import tensorboard
 import torch
 import logging
-from utils import visualization
 
 class Trainer():
     """Trainer class."""
@@ -93,18 +92,6 @@ class Trainer():
                     else:
                         summary_writer.add_image(
                             k + ' train_figure', v, global_step=step, dataformats='HWC')
-
-                # episode_image_train = visualization.generate_episode_figure(self._env, self._agent, max_steps=100)
-                
-                # Train video
-                # episode_images_train = visualization.generate_episode_video(
-                #     self._env, self._agent, max_steps=100)
-                # for k, v in episode_images_train.items():
-                #     if 'z' in k:
-                #         summary_writer.add_image(k + ' train_video', v, global_step=step)
-                #     else:
-                #         summary_writer.add_image(
-                #             k + ' train_video', v, global_step=step, dataformats='HWC')
 
             # Reset environment if end of episode is reached
             if timestep['done']: 
