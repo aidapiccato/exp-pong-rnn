@@ -26,7 +26,6 @@ import logging
 FLAGS= flags.FLAGS
 flags.DEFINE_string('config',
                     'configs.dqn.conv_mlp',
-                    # 'configs.random',
                     'Module name of config to use')
 flags.DEFINE_string(
     'config_overrides', '',
