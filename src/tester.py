@@ -33,11 +33,21 @@ class Tester():
         summary_dir = os.path.join(log_dir, 'tensorboard') 
         summary_writer = tensorboard.SummaryWriter(log_dir=summary_dir)
 
-        episode_image_figure = self._env.generate_test_figure(self._agent, max_steps=self._iterations) 
-        for k, v in episode_image_figure.items():
+        test_figure = self._env.generate_test_figure(self._agent, max_steps=self._iterations) 
+        for k, v in test_figure.items():
             if 'z' in k:
-                summary_writer.add_image(k + ' train_figure', v, global_step=20000)
+                summary_writer.add_image(k + ' test_figure', v, global_step=20000)
             else:
                 summary_writer.add_image(
-                    k + ' train_figure', v, global_step=200000, dataformats='HWC')
+                    k + ' test_figure', v, global_step=200000, dataformats='HWC')
+
+        episode_image_figure = self._env.generate_episode_figure(self._agent, max_steps=self._iterations) 
+        for k, v in episode_image_figure.items():
+            if 'z' in k:
+                summary_writer.add_image(k + ' episode_test_figure', v, global_step=20000)
+            else:
+                summary_writer.add_image(
+                    k + ' episode_test_figure', v, global_step=200000, dataformats='HWC')
+
         summary_writer.close()
+

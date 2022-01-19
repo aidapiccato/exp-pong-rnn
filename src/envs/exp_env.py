@@ -1,7 +1,6 @@
 """Environment class.
 """
 
-import io
 import gym
 import numpy as np
 from gym import spaces
@@ -65,9 +64,11 @@ class ExpEnv(gym.Env):
         one_hot = np.zeros((1, GRID_DIM))
         one_hot[:, int(self.agent_pos)] = 1
         one_hot = one_hot.squeeze()
-        time_since_last_visit = self.last_visit - self.current_step
-        known = np.clip(GRID_DIM + time_since_last_visit, a_min=0, a_max=GRID_DIM)
-        return known.squeeze() 
+        return one_hot
+        # time_since_last_visit = self.last_visit - self.current_step
+        # known = np.clip(GRID_DIM + time_since_last_visit, a_min=0, a_max=GRID_DIM)
+        # return known.squeeze() 
+
 
     def render(self, mode='human', close=False):
         print(f'Agent position: {self.agent_pos}')
@@ -81,6 +82,7 @@ class ExpEnv(gym.Env):
         ax.imshow(grid)
         ax.axis('off')
         width, height = fig.get_size_inches() * fig.get_dpi()
+        fig.tight_layout()
         canvas.draw()       
         image = np.fromstring(canvas.tostring_rgb(), dtype='uint8').reshape(int(height), int(width), 3)
         return image
@@ -110,22 +112,29 @@ class ExpEnv(gym.Env):
         return images_dict
 
     def _generate_episode_figure(self, agent_pos, reward, input):
-        fig = Figure()
+        fig = Figure(figsize=(8, 4))
         canvas = FigureCanvas(fig)
 
         ax = fig.add_subplot(121)
         ax_right = ax.twinx()
         ax.plot(agent_pos)
         ax.set_ylim(-1, GRID_DIM)
-        ax.set_ylabel('x')
-        ax.set_xlabel('timestep')
+        ax.set_ylabel('x position')
+        ax.set_xlabel('time')
         ax_right.plot(reward, 'r')
         ax_right.set_ylabel('reward')   
-
+        ax_right.yaxis.label.set_color('red')
+        
         ax = fig.add_subplot(122)
         ax.imshow(input)
+        ax.set_xlabel('x position')
+        ax.set_ylabel('time')
 
+        fig.tight_layout()
         width, height = fig.get_size_inches() * fig.get_dpi()
         canvas.draw()
         image = np.fromstring(canvas.tostring_rgb(), dtype='uint8').reshape(int(height), int(width), 3)
         return [image]
+
+    def generate_test_figure(self, agent, max_steps, buffer_height=3):
+        return {}

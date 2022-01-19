@@ -10,17 +10,17 @@ from utils.visualization import image_reshaping
 
 GRID_DIM = 10
 
-class PongEnv(gym.Env):
-    """Environment for Pong."""
+class OccPongEnv(gym.Env):
+    """Environment for occluded Pong."""
     metadata = {'render.modes': ['human']}
 
     def __init__(self):
-        super(PongEnv, self).__init__()
+        super(OccPongEnv, self).__init__()
         # Actions are either stay, move left, move right
         self.action_space = spaces.Discrete(n=3, start=-1)
         # Observations are an array of floats, where value of each one indicates amount of time         
         self.observation_space = spaces.Box(low=0, high=1, shape=(1, GRID_DIM), dtype=np.float32)
-        self.n_prey = 2
+        self.n_prey = 1
         self.min_target_t = 5
         self.min_int_t = 5
         self.max_int_t = 10
@@ -31,7 +31,8 @@ class PongEnv(gym.Env):
         self.prey_gain = GRID_DIM/10
         self.x_width = 0
 
-    def reset(self):
+
+    def reset(self): 
         # Reset the state of the environment to an initial state
         self.current_step = 0
         self.agent_pos = np.float32(GRID_DIM/2)
@@ -40,25 +41,28 @@ class PongEnv(gym.Env):
         self.target_t += self.min_target_t 
         self.start_target_t = self.target_t - int(GRID_DIM/self.prey_gain)
         self.target_x = [self.target_x_distrib.sample() for _ in range(self.n_prey)]
+        self.seen = [False for _ in range(self.n_prey)]
         self.input = self._generate_input()
         return dict(obs=self._next_observation(), reward=0, done=False, info={}, image=self._get_image())
 
     def _generate_input(self):
         input = np.zeros((self.max_t, GRID_DIM))
         for start_target_t, target_t, target_x in zip(self.start_target_t, self.target_t, self.target_x):
-            input[start_target_t:target_t, target_x] += np.linspace(0, 1, 10)
+            input[start_target_t:target_t, target_x] = np.linspace(0, 1, 10)
         return input
 
     def _next_observation(self):
         one_hot = np.zeros((1, GRID_DIM))
         one_hot[:, int(self.agent_pos)] = 1
-        input = self.input[self.current_step, :]                             
+        input = self.input[self.current_step]
+        # Masking unseen balls
+        for target_x, seen in zip(self.target_x, self.seen):
+            if not seen:
+                input[target_x] = 0                                
         return np.concatenate((input.reshape(1, -1), one_hot), axis=1).squeeze()
-
 
     def step(self, action):
         # Execute one time step within the environment
-
         self.current_step += 1
         self._take_action(action)
         obs = self._next_observation()
@@ -67,12 +71,17 @@ class PongEnv(gym.Env):
         return dict(obs=obs, reward=reward, done=done, info={}, image=self._get_image())    
 
     def _is_done(self):
-        return self.current_step > (np.amax(self.target_t) + 1) or self.current_step >= self.max_t - 1
+        return self.current_step > (np.amax(self.target_t) + 2) or self.current_step > self.max_t
 
     def _take_action(self, action):  
         action = action + self.action_space.start
         self.agent_pos += np.array(action).squeeze() * self.agent_gain
         self.agent_pos = np.clip(self.agent_pos, a_min=0, a_max=GRID_DIM-1)
+        for prey, target_x, start_target_t, target_t, seen in zip(range(self.n_prey), self.target_x, self.start_target_t, self.target_t, self.seen):
+            if start_target_t <= self.current_step <= target_t:
+                if not seen:
+                    if target_x - self.x_width <= self.agent_pos <= target_x + self.x_width :
+                        self.seen[prey] = True
 
     def _get_reward(self):
         reward = 0
@@ -81,6 +90,7 @@ class PongEnv(gym.Env):
                 if target_x - self.x_width <= self.agent_pos <= target_x + self.x_width:
                     reward += 1
         return reward
+
 
     def generate_episode_figure(self, agent, max_steps, buffer_height=3):
         num_steps = 0
@@ -133,11 +143,12 @@ class PongEnv(gym.Env):
         image = np.fromstring(canvas.tostring_rgb(), dtype='uint8').reshape(int(height), int(width), 3)
         return [image]
 
-    def generate_test_figure(self, agent, max_steps, buffer_height=3):
-        return {}
-
     def render(self, mode='human', close=False):
         print(f'Agent position: {self.agent_pos}')
 
+    def generate_test_figure(self, agent, max_steps, buffer_height=3):
+        return {}
+
+        
     def _get_image(self):
         return None

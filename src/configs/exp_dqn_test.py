@@ -1,28 +1,25 @@
 """Config."""
 
-import trainer
+import tester
 import torch
 from agents import dqn
 from envs import exp_env
-from utils import replay 
-from utils import mlp
-
-def get_q_net_config():
-    config = {
-        'constructor': mlp.MLP,
-        'kwargs': {
-            'in_features': 10 + 3, # AIDA: Length of observation (20), plus action vector
-            'layer_features': [24, 1],
-            'activation': [torch.nn.ReLU(), torch.nn.ReLU(),  torch.nn.ReLU()]
-        },
-    }
-    return config
+from utils import snapshot
+from utils import replay
+def get_reloaded_q_net():
+    q_net = snapshot.snapshot(
+        '../logs/2',
+        995000,
+        ['kwargs', 'agent', 'kwargs', 'q_net'],
+        freeze_weights=True,
+    )
+    return q_net
 
 def get_agent_config():
     config = {
         'constructor': dqn.DQN,
         'kwargs': {
-            'q_net': get_q_net_config(),
+    'q_net': get_reloaded_q_net(),
             'optim_config': {
                 'optimizer': torch.optim.Adam,
                 'kwargs': {
@@ -32,8 +29,6 @@ def get_agent_config():
             'replay': {
                 'constructor': replay.FIFO,
                 'kwargs': {
-                    # This replay capacity is an important parameter. It has a
-                    # lot of influence on learning stability.
                     'capacity': int(1e5),
                 },
             },
@@ -52,15 +47,11 @@ def get_config():
     """Get config for main.py."""
 
     config = {
-        'constructor': trainer.Trainer,
+        'constructor': tester.Tester,
         'kwargs': {
             'agent': get_agent_config(),
             'env': exp_env.ExpEnv(),    
-            'iterations': int(1e6),
-            'train_every': 1,
-            'image_eval_every': 20*2,
-            'scalar_eval_every': 100,
-            'snapshot_every': 5000,
+            'iterations': int(1e4),
         },
     }
 
