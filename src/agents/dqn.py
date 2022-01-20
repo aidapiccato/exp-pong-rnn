@@ -85,7 +85,7 @@ class DQN():
             timestep['reward'],
             timestep['obs'],
         )
-        # import pdb; pdb.set_trace()
+        
         # Sample from replay
         obs_prev, a, r, obs = self._replay.read(batch_size=self._batch_size)
 

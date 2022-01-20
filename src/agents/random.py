@@ -1,6 +1,5 @@
 """Random agent."""
 
-import numpy as np
 
 class Random():
 
@@ -9,11 +8,12 @@ class Random():
         batch_size = timestep['obs'].size(0)
         return [env.action_space.sample() for _ in range(batch_size)]
 
-    def train_step(self, *args, **kwargs):
+    def train_episode(self, *args, **kwargs):
         del args
         del kwargs
         loss = 0.
-        return loss
+        reward = 0.
+        return dict(loss=loss, reward=reward)
 
     def state_dict(self):
         return {} 

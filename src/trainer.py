@@ -97,7 +97,7 @@ class Trainer():
             if timestep['done']: 
                 logging.debug('Episode done')
                 timestep = self._env.reset()
-
+    
             # Save snapshot
             if step % self._snapshot_every == 0:
                 logging.info('Saving snapshot.')
