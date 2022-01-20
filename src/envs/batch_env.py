@@ -13,7 +13,7 @@ class BatchEnv(gym.Env):
          return self._envs[0].action_space
 
     def reset(self):
-        self._envs = [self._env_class(self._env_kwargs) for _ in range(self._batch_size)]
+        self._envs = [self._env_class(**self._env_kwargs) for _ in range(self._batch_size)]
         obs_batch = [env.reset() for env in self._envs]
         obs_batch = {k: np.stack([d[k] for d in obs_batch])
                       for k in self._envs[0].data_keys}
