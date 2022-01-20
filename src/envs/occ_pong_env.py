@@ -31,7 +31,8 @@ class OccPongEnv(gym.Env):
         self._current_step = 0
         self._agent_pos = np.float32(self._grid_width/2)
         trajectory_len = int(self._grid_height/self._prey_gain)
-        self._target_t = np.where(np.random.binomial(1, p=self._p_prey, size=self._max_t - trajectory_len))[0] + trajectory_len
+        self._target_t = trajectory_len + np.cumsum(np.random.geometric(self._p_prey, size=self._max_t))
+        self._target_t = self._target_t[self._target_t < self._max_t - trajectory_len]        
         self._n_prey = len(self._target_t)
         self._target_x = [np.random.randint(low=0, high=self._grid_width) for _ in range(self._n_prey)]
         self._start_target_t = self._target_t - trajectory_len
