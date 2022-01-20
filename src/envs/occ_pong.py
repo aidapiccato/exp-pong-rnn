@@ -14,7 +14,7 @@ class OccPongEnv(gym.Env):
     """Environment for occluded Pong."""
     metadata = {'render.modes': ['human']}
 
-    def __init__(self):
+    def __init__(self, env_kwargs):
         super(OccPongEnv, self).__init__()
         # Actions are either stay, move left, move right
         self.action_space = spaces.Discrete(n=3, start=-1)
@@ -43,7 +43,7 @@ class OccPongEnv(gym.Env):
         self.target_x = [self.target_x_distrib.sample() for _ in range(self.n_prey)]
         self.seen = [False for _ in range(self.n_prey)]
         self.input = self._generate_input()
-        return dict(obs=self._next_observation(), reward=0, done=False, info={}, image=self._get_image())
+        return dict(obs=self._next_observation(), reward=0, done=False)
 
     def _generate_input(self):
         input = np.zeros((self.max_t, GRID_DIM))
@@ -55,7 +55,7 @@ class OccPongEnv(gym.Env):
         one_hot = np.zeros((1, GRID_DIM))
         one_hot[:, int(self.agent_pos)] = 1
         input = self.input[self.current_step]
-        # Masking unseen balls
+
         for target_x, seen in zip(self.target_x, self.seen):
             if not seen:
                 input[target_x] = 0                                
@@ -68,7 +68,7 @@ class OccPongEnv(gym.Env):
         obs = self._next_observation()
         reward = self._get_reward()
         done = self._is_done()
-        return dict(obs=obs, reward=reward, done=done, info={}, image=self._get_image())    
+        return dict(obs=obs, reward=reward, done=done)    
 
     def _is_done(self):
         return self.current_step > (np.amax(self.target_t) + 2) or self.current_step > self.max_t
@@ -149,6 +149,8 @@ class OccPongEnv(gym.Env):
     def generate_test_figure(self, agent, max_steps, buffer_height=3):
         return {}
 
-        
+    @property
+    def data_keys(self):
+        return ('obs', 'reward', 'done')
     def _get_image(self):
         return None
