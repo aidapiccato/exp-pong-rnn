@@ -14,14 +14,14 @@ class OccPongEnv(gym.Env):
     """Environment for occluded pong."""
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, p_prey, max_t, grid_height=10, grid_width=10, agent_gain=1, prey_gain=1, window_width=1):
+    def __init__(self, p_prey, n_steps, grid_height=10, grid_width=10, agent_gain=1, prey_gain=1, window_width=1):
         super(OccPongEnv, self).__init__()
         self._grid_width = grid_width
         self._grid_height = grid_height
         self.action_space = spaces.Discrete(n=3, start=-1)
         self.observation_space = spaces.Box(low=0, high=1, shape=(1, self._grid_width), dtype=np.float32)
         self._p_prey = p_prey
-        self._max_t = max_t
+        self._n_steps = n_steps
         self._agent_gain = agent_gain
         self._prey_gain = prey_gain
         self._window_width = window_width
@@ -31,17 +31,17 @@ class OccPongEnv(gym.Env):
         self._current_step = 0
         self._agent_pos = np.float32(self._grid_width/2)
         trajectory_len = int(self._grid_height/self._prey_gain)
-        self._target_t = trajectory_len + np.cumsum(np.random.geometric(self._p_prey, size=self._max_t))
-        self._target_t = self._target_t[self._target_t < self._max_t - trajectory_len]        
+        self._target_t = trajectory_len + np.cumsum(np.random.geometric(self._p_prey, size=self._n_steps))
+        self._target_t = self._target_t[self._target_t < self._n_steps]        
         self._n_prey = len(self._target_t)
         self._target_x = [np.random.randint(low=0, high=self._grid_width) for _ in range(self._n_prey)]
         self._start_target_t = self._target_t - trajectory_len
         self._visible = [False for _ in range(self._n_prey)]
         self._input = self._generate_input()
-        return dict(obs=self._next_observation(), reward=0, done=False)
+        return dict(observation=self._next_observation(), reward=0, done=False)
 
     def _generate_input(self):
-        input = np.zeros((self._max_t, self._grid_width))
+        input = np.zeros((self._n_steps, self._grid_width))
         for start_target_t, target_t, target_x in zip(self._start_target_t, self._target_t, self._target_x):
             input[start_target_t:target_t, target_x] += np.linspace(0, 1, 10)
         return input
@@ -63,10 +63,10 @@ class OccPongEnv(gym.Env):
         obs = self._next_observation()
         reward = self._get_reward()
         done = self._is_done()
-        return dict(obs=obs, reward=reward, done=done)    
+        return dict(observation=obs, reward=reward, done=done)    
 
     def _is_done(self):
-        return self._current_step == self._max_t - 1
+        return self._current_step == self._n_steps - 1
 
     def _take_action(self, action):  
         action = action + self.action_space.start
@@ -88,65 +88,13 @@ class OccPongEnv(gym.Env):
         return reward
 
 
-    # def generate_episode_figure(self, agent, max_steps, buffer_height=3):
-    #     num_steps = 0
-    #     agent_pos = []
-    #     reward = []
-    #     input = []
-    #     while num_steps == 0:
-    #         timestep = self.reset()
-    #         agent_pos = []
-    #         reward = []
-    #         input = []
-    #         while not timestep['done'] and num_steps < max_steps:
-    #             num_steps += 1
-    #             action = agent.step(timestep, self, test=True)            
-    #             timestep = self.step(action)
-    #             agent_pos.append(self.agent_pos)
-    #             reward.append(timestep['reward'])
-    #             input.append(timestep['obs'])
-    #         agent_pos = np.array(agent_pos).squeeze()
-    #         reward = np.array(reward).squeeze()
-    #         image = self._generate_episode_figure(agent_pos, self.target_x, self.target_t, reward, input)
-    #     self.reset()
-    #     images_dict = {'validation': image_reshaping(image, buffer_height)}    
-    #     return images_dict
-
-    # def _generate_episode_figure(self, agent_pos, target_x, target_t, reward, input):
-    #     fig = Figure(figsize=(8, 4))
-    #     canvas = FigureCanvas(fig)
-
-    #     ax = fig.add_subplot(121)
-    #     ax_right = ax.twinx()
-    #     ax.plot(agent_pos)
-    #     ax.scatter(target_t - 1, target_x, c='green')
-    #     ax.set_ylim(-1, GRID_DIM)
-    #     ax.set_ylabel('x position')
-    #     ax.set_xlabel('time')
-    #     ax_right.plot(reward, 'r')
-    #     ax_right.set_ylim(-1, 1)
-    #     ax_right.set_ylabel('reward')
-    #     ax_right.yaxis.label.set_color('red')
-
-    #     ax = fig.add_subplot(122)
-    #     ax.imshow(input)
-    #     ax.set_xlabel('x position')
-    #     ax.set_ylabel('time')
-
-    #     fig.tight_layout()
-    #     width, height = fig.get_size_inches() * fig.get_dpi()
-    #     canvas.draw()
-    #     image = np.fromstring(canvas.tostring_rgb(), dtype='uint8').reshape(int(height), int(width), 3)
-    #     return [image]
-
-    def render(self, mode='human', close=False):
-        print(f'Agent position: {self._agent_pos}')
-
-    def generate_test_figure(self, agent, max_steps, buffer_height=3):
-        return {}
-
     @property
     def data_keys(self):
-        return ('obs', 'reward', 'done')
+        return ('observation', 'reward', 'done')
+
+    @property
+    def n_steps(self):
+        return self._n_steps
+
     def _get_image(self):
         return None
