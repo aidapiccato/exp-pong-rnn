@@ -11,7 +11,15 @@ class OccPongEnv(gym.Env):
     """Environment for occluded pong."""
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, p_prey, n_steps, grid_height=10, grid_width=10, agent_gain=1, prey_gain=1, window_width=1, paddle_radius=1):
+    def __init__(self,
+                 p_prey,
+                 n_steps,
+                 grid_height=10,
+                 grid_width=10,
+                 agent_gain=1,
+                 prey_gain=1,
+                 window_width=1,
+                 paddle_radius=1):
         super(OccPongEnv, self).__init__()
         self._grid_width = grid_width
         self._grid_height = grid_height
@@ -23,16 +31,19 @@ class OccPongEnv(gym.Env):
         self._agent_gain = agent_gain
         self._prey_gain = prey_gain
         self._window_width = window_width
-        self._paddle_radius = paddle_radius 
+        self._paddle_radius = paddle_radius
 
     def reset(self):
         # Reset the state of the environment to an initial state
         self._current_step = 0
         self._agent_pos = np.float32(self._grid_width/2)
         trajectory_len = int(self._grid_height/self._prey_gain)
-        self._target_t = trajectory_len + \
-            np.cumsum(np.random.geometric(self._p_prey, size=self._n_steps))
-        self._target_t = self._target_t[self._target_t < self._n_steps]
+        self._target_t = []
+        while len(self._target_t) == 0:
+            self._target_t = trajectory_len + \
+                np.cumsum(np.random.geometric(
+                    self._p_prey, size=self._n_steps))
+            self._target_t = self._target_t[self._target_t < self._n_steps]
         self._n_prey = len(self._target_t)
         self._target_x = [np.random.randint(
             low=0, high=self._grid_width) for _ in range(self._n_prey)]
@@ -48,7 +59,8 @@ class OccPongEnv(gym.Env):
     def _generate_input(self):
         input = np.zeros((self._n_steps, self._grid_width))
         for start_target_t, target_t, target_x in zip(self._start_target_t, self._target_t, self._target_x):
-            input[start_target_t:target_t, target_x] += np.linspace(0, 1, 10)
+            input[start_target_t:target_t,
+                  target_x] += np.linspace(0, 1, int(self._grid_height/self._prey_gain))
         return input
 
     def _next_observation(self):
@@ -79,7 +91,7 @@ class OccPongEnv(gym.Env):
     def _get_info(self):
         info = dict(
             target_x=self._target_x,
-            target_t=self._target_t, 
+            target_t=self._target_t,
             agent_pos=self._agent_pos
         )
         return info

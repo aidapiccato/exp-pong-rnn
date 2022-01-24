@@ -1,6 +1,6 @@
 """Config."""
 
-import trainer
+import tester
 import torch
 from agents import q_learner
 from envs import occ_pong_env
@@ -60,10 +60,8 @@ def get_agent_config():
                     'env_class': occ_pong_env.OccPongEnv,
                     'p_prey': 0.4, 
                     'n_steps': 20,
-                    'paddle_radius': 0,
+                    'paddle_radius': 1,
                     'window_width': 10,
-                    'grid_height': 10,
-                    'grid_width': 10,
                 }
             },    
             'q_net': get_q_net_config(),            
@@ -87,13 +85,10 @@ def get_config():
     """Get config for main.py."""
 
     config = {
-        'constructor': trainer.Trainer,
+        'constructor': tester.Tester,
         'kwargs': {
             'agent': get_agent_config(),
-            'episodes': int(1e6),
-            'image_eval_every': 20*2,
-            'scalar_eval_every': 100,
-            'snapshot_every': 5000,
+            'iterations': 100
         },
     }
 

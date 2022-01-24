@@ -7,7 +7,7 @@ import torch
 import utils.visualization
 
 
-class EpisodeTrainer:
+class Trainer:
     """Trainer class for trial-based updates. """
 
     def __init__(self,
