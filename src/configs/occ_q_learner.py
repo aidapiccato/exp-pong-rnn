@@ -60,6 +60,7 @@ def get_agent_config():
                     'env_class': occ_pong_env.OccPongEnv,
                     'p_prey': 0.9, 
                     'n_steps': 20,
+                    'paddle_radius': 1,
                     'window_width': 10,
                 }
             },    
@@ -87,7 +88,7 @@ def get_config():
         'constructor': episode_trainer.EpisodeTrainer,
         'kwargs': {
             'agent': get_agent_config(),
-            'episodes': int(1e3),
+            'episodes': int(1e6),
             'image_eval_every': 20*2,
             'scalar_eval_every': 100,
             'snapshot_every': 5000,

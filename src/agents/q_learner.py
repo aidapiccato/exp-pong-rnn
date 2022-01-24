@@ -115,6 +115,7 @@ class QLearner(torch.nn.Module):
         hiddens = [self._init_hiddens()]
         observations = []
         actions = []
+        infos = []
         q_values = []
 
         timestep = self._env.reset()
@@ -123,7 +124,7 @@ class QLearner(torch.nn.Module):
             current_obs = torch.from_numpy(
                 timestep['observation'].astype(np.float32))
             observations.append(current_obs)
-
+            infos.append(timestep['info'])
             # Step RNN to get new hiddens
             encoded_obs = self._encoder(current_obs)
             new_hidden = self._rnn_core(
@@ -140,14 +141,14 @@ class QLearner(torch.nn.Module):
 
             # Step environment on acctions and get reward
             timestep = self._env.step(a)
-            rewards.append(timestep['reward'])
-            
+            rewards.append(timestep['reward']) 
         outputs = dict(
             rewards=rewards,
             hiddens=hiddens,
             observations=observations,
             actions=actions,
             q_values=q_values,
+            infos=infos
         )
 
         return outputs
