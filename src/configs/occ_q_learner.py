@@ -1,4 +1,4 @@
-"""Config."""
+"""Config for training q-learner agent on occluded pong task."""
 
 import trainer
 import torch
@@ -76,7 +76,7 @@ def get_agent_config():
                 },
             },
             'discount': 0.1,
-            'epsilon': 1.,
+            'epsilon': .4,
         },       
     }
     return config

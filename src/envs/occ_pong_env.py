@@ -1,4 +1,4 @@
-"""Environment class.
+"""Occluded pong environment.
 """
 
 from this import d
@@ -34,7 +34,6 @@ class OccPongEnv(gym.Env):
         self._paddle_radius = paddle_radius
 
     def reset(self):
-        # Reset the state of the environment to an initial state
         self._current_step = 0
         self._agent_pos = np.float32(self._grid_width/2)
         trajectory_len = int(self._grid_height/self._prey_gain)

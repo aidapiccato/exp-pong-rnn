@@ -4,7 +4,6 @@ import importlib
 import os
 from python_utils.configs import build_from_config
 from python_utils.configs import override_config
-import numpy as np
 import torch
 
 
@@ -14,7 +13,7 @@ def snapshot(log_dir,
              freeze_weights=False,
              config_overrides=''):
     """Get a model restored from a snapshot.
-    
+
     Args:
         log_dir: String. Path to log directory for model to restore.
         snapshot_num: Int. Snapshot number. Must be the name of a file in
@@ -24,17 +23,17 @@ def snapshot(log_dir,
             of the model.
         config_overrides: String. JSON-serialized dictionary of config overrides
             to impose in addition to those used when the model was trained.
-            
+
     Returns:
         model: Constructed model with parameters restored from snapshot.
     """
     snapshot_path = os.path.join(log_dir, 'snapshots', str(snapshot_num))
     config_name = open(os.path.join(log_dir, 'config_name.log'), 'r').read()
-    
+
     # Load config
     config_module = importlib.import_module(config_name)
     config = config_module.get_config()
-    
+
     # Find and apply config overrides used when training the snapshot
     f_config_overrides = os.path.join(log_dir, 'config_overrides.log')
     f_config_overrides_open = open(f_config_overrides, 'r')
@@ -45,21 +44,30 @@ def snapshot(log_dir,
     s_config_overrides = s_config_overrides.replace("'", '"')
     config = override_config.override_config_from_json(
         config, s_config_overrides)
-        
+
     # Now also apply the additional config_overrides passed in as an argument
     config = override_config.override_config(
         config, config_overrides)
-    
+
     # Build model
     for k in model_node:
         config = config[k]
     model = build_from_config.build_from_config(config)
-    
+
+    reloaded_params = torch.load(snapshot_path)
+    filtered_params = ({k: v for k, v in reloaded_params.items()
+                        if f'_{model_node[-1]}' in k})
+    old_keys = list(filtered_params.keys())
+    for k in old_keys:
+        new_k = k.split(f'_{model_node[-1]}.')[1]
+        filtered_params[new_k] = filtered_params.pop(k)
+
+
     # Restore model parameters from snapshot
-    model.load_state_dict(torch.load(snapshot_path))
-    
+    model.load_state_dict(filtered_params)
+
     if freeze_weights:
         for param in model.parameters():
             param.requires_grad = False
-            
+
     return model

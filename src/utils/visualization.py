@@ -1,3 +1,4 @@
+"""Helper methods for generating figures"""
 from importlib_metadata import itertools
 import seaborn as sns
 import numpy as np
@@ -46,7 +47,7 @@ def _find_optimal_reward(target_x, target_t):
         max_len_path = 0
     else:
         max_len_path = np.amax([len(path) for path in paths])
-    return max_len_path
+    return max_len_path + 1
 
 
 def generate_summary_figure(agent, max_episodes, buffer_height=3):
@@ -72,6 +73,8 @@ def generate_summary_figure(agent, max_episodes, buffer_height=3):
 
     ax = fig.add_subplot(111)
     sns.regplot(x=optimal_rewards, y=rewards, ax=ax)
+    ax.set_xlabel('optimal reward')
+    ax.set_ylabel('agent reward')
     mn = min(optimal_rewards.min(), rewards.min())
     mx = max(optimal_rewards.max(), rewards.max())
     points = np.linspace(mn, mx, 100)

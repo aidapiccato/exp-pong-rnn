@@ -1,6 +1,7 @@
+"""Wrapper class for batching environments"""
+
 import gym
 import numpy as np
-import torch
 
 class BatchEnv(gym.Env):
     def __init__(self, batch_size, env_class, **env_kwargs):

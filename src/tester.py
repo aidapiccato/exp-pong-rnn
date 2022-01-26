@@ -1,3 +1,5 @@
+"""Class for running reloaded agent on task and writing 
+summary figures to tensorboard"""
 from torch.utils import tensorboard
 import os
 import utils.visualization
